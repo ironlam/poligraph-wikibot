@@ -16,7 +16,7 @@ export function createWikidataClient(config: WikidataClientConfig): WBEditInstan
       username: config.username,
       password: config.password,
     },
-    bot: true,
+    bot: false,
     maxlag: 5,
     summary: 'Updating French parliamentary mandates from official open data (Poligraph)',
     userAgent: 'PoliGraphBot/0.1.0 (https://github.com/ironlam/poligraph-wikibot)',

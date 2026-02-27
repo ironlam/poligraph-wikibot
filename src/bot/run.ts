@@ -3,6 +3,7 @@ import { loadSnapshot, saveSnapshot } from '../diff/snapshot.js'
 import { computeChangeset } from '../diff/compute.js'
 import { getClientFromEnv } from '../wikidata/client.js'
 import { addClaim, updateClaimEndDate, toSnapshotEntry } from '../wikidata/write.js'
+import { preflightCheck } from '../wikidata/preflight.js'
 
 export interface RunOptions {
   dryRun: boolean
@@ -42,6 +43,27 @@ export async function run(options: RunOptions) {
 
   if (limit) {
     console.log(`   (limited to ${limit} edits: ${adds.length} adds + ${updates.length} updates)`)
+  }
+
+  // 2b. Pre-flight: check Wikidata for near-duplicate claims (±2 day tolerance)
+  const instance = process.env.WIKIDATA_INSTANCE || 'https://test.wikidata.org'
+  if (adds.length > 0) {
+    console.log('   Running pre-flight duplicate check against Wikidata...')
+    const preflight = await preflightCheck(adds, instance)
+    if (preflight.skipped.length > 0) {
+      console.log(`   Pre-flight: ${preflight.skipped.length} near-duplicates skipped, ${preflight.cleared.length} cleared`)
+      for (const entry of preflight.skipped) {
+        console.log(`   ~ SKIP ${entry.politicianQid} (${entry.politicianName}): near-duplicate on Wikidata [${entry.qualifiers.P580}]`)
+      }
+    }
+    adds.length = 0
+    adds.push(...preflight.cleared)
+  }
+
+  if (adds.length === 0 && updates.length === 0) {
+    console.log('\nNothing to do after pre-flight check.')
+    await disconnect()
+    return
   }
 
   // 3. Write to Wikidata (or dry-run)
