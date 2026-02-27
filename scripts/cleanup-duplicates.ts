@@ -7,15 +7,10 @@ import 'dotenv/config'
 import WBEdit from 'wikibase-edit'
 
 const AFFECTED_ENTITIES = [
-  'Q966529',    // Damien Abad
-  'Q3083773',   // François Abadie
-  'Q136485468', // Audrey Abadie-Amiel
-  'Q30339386',  // Bérangère Abba
-  'Q2381218',   // Pierre Abelin
-  'Q63765036',  // Nadège Abomangoli
+  'Q63537077',  // Marie-Do Aeschlimann (wrong date from timezone bug)
 ]
 
-const BOT_SOURCE_QID = 'Q19938912' // Assemblée nationale open data
+const BOT_SOURCE_QID = 'Q3475482' // Sénat (France)
 const USER_AGENT = 'PoliGraphBot/0.1.0 (https://github.com/ironlam/poligraph-wikibot)'
 
 interface WikidataClaim {
@@ -57,7 +52,7 @@ async function main() {
     },
     bot: false,
     maxlag: 20,
-    summary: 'Removing duplicate P39 claims added in error by PoliGraphBot',
+    summary: 'Removing P39 claim with incorrect date (timezone bug) — will re-add with correct date',
     userAgent: USER_AGENT,
   })
 

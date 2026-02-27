@@ -4,7 +4,9 @@ import { MANDATE_TYPE_TO_QID } from '../config/wikidata.js'
 
 function formatDate(d: Date | null): string | null {
   if (!d) return null
-  return d.toISOString().split('T')[0]
+  // Format in Europe/Paris timezone — all French parliamentary dates are local
+  // Without this, midnight CEST (UTC+2) shifts back 1 day in UTC
+  return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' })
 }
 
 export function computeChangeset(
