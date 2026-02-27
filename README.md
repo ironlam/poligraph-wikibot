@@ -55,8 +55,9 @@ cp .env.example .env
 DATABASE_URL=postgresql://readonly_user:password@host:5432/poligraph
 
 # Identifiants bot Wikidata (Special:BotPasswords)
-WIKIDATA_BOT_USERNAME=PoligraphBot
-WIKIDATA_BOT_PASSWORD=botpassword_name@generated_token
+# Format : Username@BotPasswordName / token généré
+WIKIDATA_BOT_USERNAME=PoliGraphBot@PoliGraphBot
+WIKIDATA_BOT_PASSWORD=your_generated_bot_password_token
 
 # Options
 DRY_RUN=true                              # true par défaut (aucune écriture)
@@ -154,6 +155,27 @@ Le bot suit le processus standard [Wikidata:Bots](https://www.wikidata.org/wiki/
 3. Test run de 50-250 edits sur Wikidata réel
 4. Revue communautaire (~1-2 semaines)
 5. Attribution du flag bot
+
+### Template de demande
+
+La demande se fait sur [Wikidata:Requests for permissions/Bot/PoliGraphBot](https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/PoliGraphBot) :
+
+```wiki
+=== PoliGraphBot ===
+'''Operator:''' {{User|PoliGraphBot}}
+
+'''Task/s:''' Add and update P39 (position held) claims for French parliamentary mandates (députés, sénateurs) with qualifiers (P580/P582) and sourced references (P248+P854+P813).
+
+'''Code:''' https://github.com/ironlam/poligraph-wikibot
+
+'''Function details:'''
+* Reads verified mandate data from Poligraph (poligraph.fr), sourced from data.assemblee-nationale.fr and senat.fr API
+* Diff-based: only pushes changes (new mandates, updated end dates), never removes existing claims
+* Reconciliation via matchingQualifiers on P580 (start date) to prevent duplicates
+* Every claim includes full references: P248 (stated in) + P854 (reference URL) + P813 (retrieved date)
+* Rate-limited with maxlag=5, respects Wikidata server load
+* Open source (MIT), dry-run mode by default
+```
 
 ## Évolutions prévues
 
