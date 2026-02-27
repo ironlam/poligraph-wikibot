@@ -1,0 +1,56 @@
+name: Wikidata Sync
+
+on:
+  repository_dispatch:
+    types: [poligraph-sync-complete]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (no Wikidata writes)'
+        type: boolean
+        default: true
+      limit:
+        description: 'Max number of edits (0 = unlimited)'
+        type: number
+        default: 0
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run Wikidata sync
+        run: |
+          ARGS=""
+          DRY="true"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "false" ]; then
+            DRY="false"
+          fi
+          if [ "${{ inputs.limit }}" != "0" ] && [ -n "${{ inputs.limit }}" ]; then
+            ARGS="$ARGS --limit=${{ inputs.limit }}"
+          fi
+          DRY_RUN=$DRY npm run sync -- $ARGS
+        env:
+          DATABASE_URL: ${{ secrets.POLIGRAPH_DB_READONLY }}
+          WIKIDATA_BOT_USERNAME: ${{ secrets.WIKIDATA_BOT_USERNAME }}
+          WIKIDATA_BOT_PASSWORD: ${{ secrets.WIKIDATA_BOT_PASSWORD }}
+          WIKIDATA_INSTANCE: ${{ vars.WIKIDATA_INSTANCE || 'https://test.wikidata.org' }}
+
+      - name: Commit updated snapshot
+        if: success() && github.event_name == 'workflow_dispatch' && inputs.dry_run == false
+        run: |
+          git config user.name "PoligraphBot"
+          git config user.email "bot@poligraph.fr"
+          git add data/snapshot.json
+          git diff --cached --quiet || git commit -m "chore: update Wikidata snapshot after sync"
+          git push

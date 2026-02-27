@@ -1,0 +1,29 @@
+{
+  "name": "poligraph-wikibot",
+  "version": "0.1.0",
+  "description": "Wikidata bot that contributes French parliamentary mandate data from Poligraph",
+  "type": "module",
+  "scripts": {
+    "sync": "tsx src/index.ts",
+    "sync:dry": "DRY_RUN=true tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc"
+  },
+  "keywords": ["wikidata", "bot", "france", "politics", "open-data"],
+  "author": "Poligraph",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "pg": "^8.19.0",
+    "wikibase-edit": "^8.1.0",
+    "wikibase-sdk": "^11.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "@types/pg": "^8.16.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
