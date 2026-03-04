@@ -7,7 +7,13 @@ import 'dotenv/config'
 import WBEdit from 'wikibase-edit'
 
 const AFFECTED_ENTITIES = [
-  'Q63537077',  // Marie-Do Aeschlimann (wrong date from timezone bug)
+  'Q63537077',  // Marie-Do Aeschlimann
+  'Q18202561',  // Pascal Allizard
+  'Q63765050',  // Jean-Claude Anglars
+  'Q62664001',  // Jocelyne Antoine
+  'Q55343699',  // Cathy Apourceau-Poly
+  'Q65563856',  // Jean-Michel Arnaud
+  'Q41055306',  // Viviane Artigalas
 ]
 
 const BOT_SOURCE_QID = 'Q3475482' // Sénat (France)
@@ -52,7 +58,7 @@ async function main() {
     },
     bot: false,
     maxlag: 20,
-    summary: 'Removing P39 claim with incorrect date (timezone bug) — will re-add with correct date',
+    summary: 'Removing P39 claims with incorrect senator dates from Poligraph bot',
     userAgent: USER_AGENT,
   })
 
