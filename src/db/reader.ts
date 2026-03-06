@@ -46,6 +46,7 @@ export async function fetchParliamentaryMandates(): Promise<PoligraphMandate[]> 
     LEFT JOIN "ExternalId" eid ON eid."politicianId" = p.id AND eid.source = 'WIKIDATA'
     WHERE m.type IN ('DEPUTE') -- SENATEUR disabled: dates are incorrect in Poligraph DB
       AND eid."externalId" IS NOT NULL
+      AND m."startDate" >= '2017-01-01' -- pre-2017 dates are imprecise in Poligraph
     ORDER BY p."lastName", m."startDate"
   `)
   return result.rows
