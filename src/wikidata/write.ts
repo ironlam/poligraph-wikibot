@@ -1,6 +1,6 @@
 import { PROPERTIES, POSITIONS } from '../config/wikidata.js'
 import { deputeReference, senateurReference } from '../config/sources.js'
-import type { DiffEntry, SnapshotEntry } from '../diff/types.js'
+import type { DiffEntry, EnrichEntry, SnapshotEntry } from '../diff/types.js'
 import type { WBEditInstance } from './client.js'
 
 function buildReference(positionQid: string, retrievedDate: string) {
@@ -80,6 +80,30 @@ export async function updateClaimEndDate(
     return {
       success: false,
       claimGuid: entry.existingClaimGuid ?? null,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+export async function enrichClaimQualifiers(
+  wbEdit: WBEditInstance,
+  entry: EnrichEntry,
+): Promise<{ success: boolean; written: number; error?: string }> {
+  let written = 0
+  try {
+    for (const q of entry.qualifiersToAdd) {
+      await wbEdit.qualifier.set({
+        guid: entry.claimGuid as AnyId,
+        property: q.property as AnyId,
+        value: q.value as AnyId,
+      })
+      written++
+    }
+    return { success: true, written }
+  } catch (error) {
+    return {
+      success: false,
+      written,
       error: error instanceof Error ? error.message : String(error),
     }
   }

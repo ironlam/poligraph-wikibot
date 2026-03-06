@@ -3,6 +3,8 @@ export interface SnapshotEntry {
   qualifiers: {
     P580: string | null    // start time
     P582: string | null    // end time
+    P2937?: string | null  // parliamentary term
+    P4100?: string | null  // parliamentary group
   }
   claimGuid: string | null
   pushedAt: string         // ISO timestamp
@@ -31,8 +33,17 @@ export interface DiffEntry {
   existingClaimGuid?: string // for UPDATE
 }
 
+export interface EnrichEntry {
+  politicianQid: string
+  politicianName: string
+  mandateId: string
+  claimGuid: string
+  qualifiersToAdd: { property: string; value: string }[]
+}
+
 export interface Changeset {
   adds: DiffEntry[]
   updates: DiffEntry[]
+  enrichments: EnrichEntry[]
   skips: number
 }

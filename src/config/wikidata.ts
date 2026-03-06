@@ -29,3 +29,20 @@ export const LEGISLATURES: Record<string, string> = {
   'XVI': 'Q112567597',      // XVIe législature (2022-2024)
   'XV': 'Q30897847',        // XVe législature (2017-2022)
 }
+
+// Legislature date boundaries (Assemblée nationale only)
+const LEGISLATURE_PERIODS: Array<{ key: string; start: string; end: string | null }> = [
+  { key: 'XV',   start: '2017-06-21', end: '2022-06-21' },
+  { key: 'XVI',  start: '2022-06-22', end: '2024-07-07' },
+  { key: 'XVII', start: '2024-07-08', end: null },
+]
+
+/** Resolve a mandate start date to its legislature Q-ID, or null if unmapped. */
+export function resolveLegislature(startDate: string): string | null {
+  for (const period of LEGISLATURE_PERIODS) {
+    if (startDate >= period.start && (!period.end || startDate <= period.end)) {
+      return LEGISLATURES[period.key] ?? null
+    }
+  }
+  return null
+}

@@ -1,6 +1,6 @@
 import type { PoligraphMandate } from '../db/types.js'
-import type { Snapshot, DiffEntry, Changeset } from './types.js'
-import { MANDATE_TYPE_TO_QID } from '../config/wikidata.js'
+import type { Snapshot, SnapshotEntry, DiffEntry, EnrichEntry, Changeset } from './types.js'
+import { MANDATE_TYPE_TO_QID, PROPERTIES, resolveLegislature } from '../config/wikidata.js'
 
 function formatDate(d: Date | null): string | null {
   if (!d) return null
@@ -9,12 +9,41 @@ function formatDate(d: Date | null): string | null {
   return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' })
 }
 
+function computeMissingQualifiers(
+  mandate: PoligraphMandate,
+  snapshotEntry: SnapshotEntry
+): { property: string; value: string }[] {
+  const missing: { property: string; value: string }[] = []
+
+  // P2937: parliamentary term (derived from start date)
+  if (!snapshotEntry.qualifiers.P2937) {
+    const startStr = formatDate(mandate.startDate)
+    if (startStr) {
+      const legislatureQid = resolveLegislature(startStr)
+      if (legislatureQid) {
+        missing.push({ property: PROPERTIES.PARLIAMENTARY_TERM, value: legislatureQid })
+      }
+    }
+  }
+
+  // P4100: parliamentary group (from DB join)
+  if (!snapshotEntry.qualifiers.P4100 && mandate.parliamentaryGroupWikidataId) {
+    missing.push({
+      property: PROPERTIES.PARLIAMENTARY_GROUP,
+      value: mandate.parliamentaryGroupWikidataId,
+    })
+  }
+
+  return missing
+}
+
 export function computeChangeset(
   mandates: PoligraphMandate[],
   snapshot: Snapshot
 ): Changeset {
   const adds: DiffEntry[] = []
   const updates: DiffEntry[] = []
+  const enrichments: EnrichEntry[] = []
   let skips = 0
 
   for (const m of mandates) {
@@ -52,8 +81,21 @@ export function computeChangeset(
       updates.push(entry)
     } else {
       skips++
+      // Check for enrichment opportunities on existing claims
+      if (match.claimGuid) {
+        const qualifiersToAdd = computeMissingQualifiers(m, match)
+        if (qualifiersToAdd.length > 0) {
+          enrichments.push({
+            politicianQid: qid,
+            politicianName: `${m.politicianFirstName} ${m.politicianLastName}`,
+            mandateId: m.id,
+            claimGuid: match.claimGuid,
+            qualifiersToAdd,
+          })
+        }
+      }
     }
   }
 
-  return { adds, updates, skips }
+  return { adds, updates, enrichments, skips }
 }

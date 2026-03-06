@@ -9,4 +9,5 @@ export interface PoligraphMandate {
   politicianFirstName: string
   politicianLastName: string
   wikidataId: string | null
+  parliamentaryGroupWikidataId: string | null
 }

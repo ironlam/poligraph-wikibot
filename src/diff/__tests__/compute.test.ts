@@ -15,6 +15,7 @@ const makeMockMandate = (overrides?: Partial<PoligraphMandate>): PoligraphMandat
   politicianFirstName: 'Jean',
   politicianLastName: 'Dupont',
   wikidataId: 'Q123456',
+  parliamentaryGroupWikidataId: null,
   ...overrides,
 })
 
@@ -93,5 +94,103 @@ describe('computeChangeset', () => {
     expect(result.adds).toHaveLength(2)
     expect(result.adds[0].qualifiers.P580).toBe('2017-06-18')
     expect(result.adds[1].qualifiers.P580).toBe('2024-07-07')
+  })
+
+  it('should detect ENRICH when P2937 is missing from snapshot', () => {
+    const mandates = [makeMockMandate({ startDate: new Date('2024-07-08') })]
+    const snapshot: Snapshot = {
+      lastRun: '',
+      version: 1,
+      mandates: {
+        'Q123456': {
+          P39: [{
+            value: 'Q3044918',
+            qualifiers: { P580: '2024-07-08', P582: null },
+            claimGuid: 'Q123456$abc',
+            pushedAt: '2026-01-01T00:00:00Z',
+          }],
+        },
+      },
+    }
+    const result = computeChangeset(mandates, snapshot)
+    expect(result.skips).toBe(1)
+    expect(result.enrichments).toHaveLength(1)
+    expect(result.enrichments[0].politicianQid).toBe('Q123456')
+    expect(result.enrichments[0].claimGuid).toBe('Q123456$abc')
+    expect(result.enrichments[0].qualifiersToAdd).toContainEqual({
+      property: 'P2937',
+      value: 'Q117155032', // XVIIe legislature
+    })
+  })
+
+  it('should detect ENRICH when P4100 is missing from snapshot', () => {
+    const mandates = [makeMockMandate({
+      startDate: new Date('2024-07-08'),
+      parliamentaryGroupWikidataId: 'Q123789',
+    })]
+    const snapshot: Snapshot = {
+      lastRun: '',
+      version: 1,
+      mandates: {
+        'Q123456': {
+          P39: [{
+            value: 'Q3044918',
+            qualifiers: { P580: '2024-07-08', P582: null, P2937: 'Q117155032' },
+            claimGuid: 'Q123456$abc',
+            pushedAt: '2026-01-01T00:00:00Z',
+          }],
+        },
+      },
+    }
+    const result = computeChangeset(mandates, snapshot)
+    expect(result.enrichments).toHaveLength(1)
+    expect(result.enrichments[0].qualifiersToAdd).toEqual([
+      { property: 'P4100', value: 'Q123789' },
+    ])
+  })
+
+  it('should NOT enrich when both P2937 and P4100 already present', () => {
+    const mandates = [makeMockMandate({
+      startDate: new Date('2024-07-08'),
+      parliamentaryGroupWikidataId: 'Q123789',
+    })]
+    const snapshot: Snapshot = {
+      lastRun: '',
+      version: 1,
+      mandates: {
+        'Q123456': {
+          P39: [{
+            value: 'Q3044918',
+            qualifiers: { P580: '2024-07-08', P582: null, P2937: 'Q117155032', P4100: 'Q123789' },
+            claimGuid: 'Q123456$abc',
+            pushedAt: '2026-01-01T00:00:00Z',
+          }],
+        },
+      },
+    }
+    const result = computeChangeset(mandates, snapshot)
+    expect(result.skips).toBe(1)
+    expect(result.enrichments).toHaveLength(0)
+  })
+
+  it('should NOT enrich when claim has no GUID', () => {
+    const mandates = [makeMockMandate({ startDate: new Date('2024-07-08') })]
+    const snapshot: Snapshot = {
+      lastRun: '',
+      version: 1,
+      mandates: {
+        'Q123456': {
+          P39: [{
+            value: 'Q3044918',
+            qualifiers: { P580: '2024-07-08', P582: null },
+            claimGuid: null,
+            pushedAt: '2026-01-01T00:00:00Z',
+          }],
+        },
+      },
+    }
+    const result = computeChangeset(mandates, snapshot)
+    expect(result.skips).toBe(1)
+    expect(result.enrichments).toHaveLength(0)
   })
 })
