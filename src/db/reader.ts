@@ -1,34 +1,36 @@
-import pg from 'pg'
-import type { PoligraphMandate } from './types.js'
+import pg from "pg";
+import type { PoligraphMandate } from "./types.js";
 
-const { Pool } = pg
+const { Pool } = pg;
 
-let pool: InstanceType<typeof Pool> | null = null
+let pool: InstanceType<typeof Pool> | null = null;
 
 export function getPool() {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL
-    if (!connectionString) throw new Error('DATABASE_URL is required')
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) throw new Error("DATABASE_URL is required");
     pool = new Pool({
       connectionString,
       max: 5,
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 10_000,
       ssl: { rejectUnauthorized: false },
-    })
+    });
   }
-  return pool
+  return pool;
 }
 
 export async function disconnect() {
   if (pool) {
-    await pool.end()
-    pool = null
+    await pool.end();
+    pool = null;
   }
 }
 
-export async function fetchParliamentaryMandates(): Promise<PoligraphMandate[]> {
-  const db = getPool()
+export async function fetchParliamentaryMandates(): Promise<
+  PoligraphMandate[]
+> {
+  const db = getPool();
   const result = await db.query<PoligraphMandate>(`
     SELECT
       m.id,
@@ -46,10 +48,10 @@ export async function fetchParliamentaryMandates(): Promise<PoligraphMandate[]> 
     JOIN "Politician" p ON p.id = m."politicianId"
     LEFT JOIN "ExternalId" eid ON eid."politicianId" = p.id AND eid.source = 'WIKIDATA'
     LEFT JOIN "ParliamentaryGroup" pg ON pg.id = m."parliamentaryGroupId"
-    WHERE m.type IN ('DEPUTE') -- SENATEUR disabled: dates are incorrect in Poligraph DB
+    WHERE m.type IN ('DEPUTE', 'SENATEUR', 'MINISTRE', 'PREMIER_MINISTRE', 'SECRETAIRE_ETAT', 'MINISTRE_DELEGUE')
       AND eid."externalId" IS NOT NULL
       AND m."startDate" >= '2017-01-01' -- pre-2017 dates are imprecise in Poligraph
     ORDER BY p."lastName", m."startDate"
-  `)
-  return result.rows
+  `);
+  return result.rows;
 }
