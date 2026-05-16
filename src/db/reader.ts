@@ -47,7 +47,8 @@ export async function fetchParliamentaryMandates(): Promise<
     FROM "Mandate" m
     JOIN "Politician" p ON p.id = m."politicianId"
     LEFT JOIN "ExternalId" eid ON eid."politicianId" = p.id AND eid.source = 'WIKIDATA'
-    LEFT JOIN "ParliamentaryGroup" pg ON pg.id = m."parliamentaryGroupId"
+    LEFT JOIN "MandateParliamentary" mp ON mp."mandateId" = m.id
+    LEFT JOIN "ParliamentaryGroup" pg ON pg.id = mp."parliamentaryGroupId"
     WHERE m.type IN ('DEPUTE', 'SENATEUR', 'MINISTRE', 'PREMIER_MINISTRE', 'SECRETAIRE_ETAT', 'MINISTRE_DELEGUE')
       AND eid."externalId" IS NOT NULL
       AND m."startDate" >= '2017-01-01' -- pre-2017 dates are imprecise in Poligraph
