@@ -1,33 +1,49 @@
-import { PROPERTIES, POSITIONS } from '../config/wikidata.js'
-import { deputeReference, senateurReference } from '../config/sources.js'
-import type { DiffEntry, EnrichEntry, SnapshotEntry } from '../diff/types.js'
-import type { WBEditInstance } from './client.js'
+import { PROPERTIES, POSITIONS } from "../config/wikidata.js";
+import {
+  deputeReference,
+  senateurReference,
+  gouvernementReference,
+} from "../config/sources.js";
+import type { DiffEntry, EnrichEntry, SnapshotEntry } from "../diff/types.js";
+import type { WBEditInstance } from "./client.js";
+
+const GOUVERNEMENT_POSITION_QIDS: ReadonlySet<string> = new Set([
+  POSITIONS.PREMIER_MINISTRE,
+  POSITIONS.MINISTRE,
+  POSITIONS.SECRETAIRE_ETAT,
+  POSITIONS.MINISTRE_DELEGUE,
+]);
 
 function buildReference(positionQid: string, retrievedDate: string) {
-  if (positionQid === POSITIONS.DEPUTE) return deputeReference(retrievedDate)
-  if (positionQid === POSITIONS.SENATEUR) return senateurReference(retrievedDate)
-  throw new Error(`Unknown position QID: ${positionQid}`)
+  if (positionQid === POSITIONS.DEPUTE) return deputeReference(retrievedDate);
+  if (positionQid === POSITIONS.SENATEUR)
+    return senateurReference(retrievedDate);
+  if (GOUVERNEMENT_POSITION_QIDS.has(positionQid))
+    return gouvernementReference(retrievedDate);
+  throw new Error(`Unknown position QID: ${positionQid}`);
 }
 
 export interface WriteResult {
-  success: boolean
-  claimGuid: string | null
-  error?: string
+  success: boolean;
+  claimGuid: string | null;
+  error?: string;
 }
 
 // wikibase-edit v8 uses branded types (Q${number}, Guid, etc.)
 // Our IDs come as runtime strings from the DB, so we cast them
-type AnyId = any // eslint-disable-line @typescript-eslint/no-explicit-any
+type AnyId = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 export async function addClaim(
   wbEdit: WBEditInstance,
   entry: DiffEntry,
-  retrievedDate: string
+  retrievedDate: string,
 ): Promise<WriteResult> {
   try {
-    const qualifiers: Record<string, string> = {}
-    if (entry.qualifiers.P580) qualifiers[PROPERTIES.START_TIME] = entry.qualifiers.P580
-    if (entry.qualifiers.P582) qualifiers[PROPERTIES.END_TIME] = entry.qualifiers.P582
+    const qualifiers: Record<string, string> = {};
+    if (entry.qualifiers.P580)
+      qualifiers[PROPERTIES.START_TIME] = entry.qualifiers.P580;
+    if (entry.qualifiers.P582)
+      qualifiers[PROPERTIES.END_TIME] = entry.qualifiers.P582;
 
     const res = await wbEdit.claim.create({
       id: entry.politicianQid as AnyId,
@@ -36,21 +52,21 @@ export async function addClaim(
       qualifiers: qualifiers as AnyId,
       references: [buildReference(entry.value, retrievedDate)] as AnyId,
       reconciliation: {
-        mode: 'skip-on-value-match',
+        mode: "skip-on-value-match",
         matchingQualifiers: [PROPERTIES.START_TIME],
       },
-    })
+    });
 
     return {
       success: true,
       claimGuid: res?.claim?.id ?? null,
-    }
+    };
   } catch (error) {
     return {
       success: false,
       claimGuid: null,
       error: error instanceof Error ? error.message : String(error),
-    }
+    };
   }
 }
 
@@ -60,28 +76,28 @@ export async function updateClaimEndDate(
 ): Promise<WriteResult> {
   try {
     if (!entry.existingClaimGuid) {
-      throw new Error(`No claim GUID for update on ${entry.politicianQid}`)
+      throw new Error(`No claim GUID for update on ${entry.politicianQid}`);
     }
     if (!entry.qualifiers.P582) {
-      throw new Error(`No end date for update on ${entry.politicianQid}`)
+      throw new Error(`No end date for update on ${entry.politicianQid}`);
     }
 
     await wbEdit.qualifier.set({
       guid: entry.existingClaimGuid as AnyId,
       property: PROPERTIES.END_TIME as AnyId,
       value: entry.qualifiers.P582,
-    })
+    });
 
     return {
       success: true,
       claimGuid: entry.existingClaimGuid,
-    }
+    };
   } catch (error) {
     return {
       success: false,
       claimGuid: entry.existingClaimGuid ?? null,
       error: error instanceof Error ? error.message : String(error),
-    }
+    };
   }
 }
 
@@ -89,29 +105,29 @@ export async function enrichClaimQualifiers(
   wbEdit: WBEditInstance,
   entry: EnrichEntry,
 ): Promise<{ success: boolean; written: number; error?: string }> {
-  let written = 0
+  let written = 0;
   try {
     for (const q of entry.qualifiersToAdd) {
       await wbEdit.qualifier.set({
         guid: entry.claimGuid as AnyId,
         property: q.property as AnyId,
         value: q.value as AnyId,
-      })
-      written++
+      });
+      written++;
     }
-    return { success: true, written }
+    return { success: true, written };
   } catch (error) {
     return {
       success: false,
       written,
       error: error instanceof Error ? error.message : String(error),
-    }
+    };
   }
 }
 
 export function toSnapshotEntry(
   entry: DiffEntry,
-  claimGuid: string | null
+  claimGuid: string | null,
 ): SnapshotEntry {
   return {
     value: entry.value,
@@ -121,5 +137,5 @@ export function toSnapshotEntry(
     },
     claimGuid,
     pushedAt: new Date().toISOString(),
-  }
+  };
 }
